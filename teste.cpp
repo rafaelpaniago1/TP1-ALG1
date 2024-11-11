@@ -108,6 +108,7 @@ class Graph{
     }
 
     //Função que calcula os SCCS e descobre o vértice que cada batalhão estará.
+    //Caso seja necessário vou implementar o negócio de 
     int FirstKosaraju(vector<int>& batalion_name, vector<vector<int>>& matrix, int capital){
 
         vector<bool> visited_1(vertices, false);
@@ -162,7 +163,6 @@ int main(){
         g.addEdge(map[src],map[dest]);
     }
     //1
-
     vector<vector<int>> matrix(v, vector<int>(v,INF));
 
     int capital = g.FindCapital(matrix);
@@ -179,5 +179,4 @@ int main(){
     }
     //3.1
     
-//PROBLEMAS ATUAIS: Critério de desempate do batalhão e parte 3.
 }
