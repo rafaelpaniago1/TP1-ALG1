@@ -23,10 +23,10 @@ class Graph{
 
     }
 
-    // Registrando todas as distâncias caso seja necessário implementar o critério de empate.
+    // Visita todos os vértices em relação a startingNode e registra a distância deles em distances,
+    // para caso seja necessário a adoção de critérios de desempate na decisão do vértice do batalhão.
     int Bfs(int startingNode, vector<vector<int>>& distances){
 
-        vector<int> dist(vertices, -1);
         vector<bool> visited(vertices, false);
         queue<int> q;
         int counter = 0;
@@ -42,16 +42,18 @@ class Graph{
             counter++;
             visited[curr] = true;
             for(auto& neighbor : adjList[curr]){
-                if(!visited[neighbor]) q.push(neighbor);
-                distances[startingNode][neighbor] = distances[startingNode][curr] + 1;
-                maxDist = max(maxDist, distances[startingNode][neighbor]);
+                if(!visited[neighbor]){
+                    q.push(neighbor);
+                    distances[startingNode][neighbor] = distances[startingNode][curr] + 1;
+                    maxDist = max(maxDist, distances[startingNode][neighbor]);
+                } 
             }
         }
         if(counter != vertices) return INF;
         return maxDist;
     }
 
-    //Encontra a capital, calcula todas as distancias entre 2 vertices e a distancia ate a capital.
+    //Encontra a capital, calcula todas as distancias quaisquer 2 vertices e registra em matrix.
     int FindCapital(vector<vector<int>>& matrix){
         
         int currCapital = 0;
@@ -65,7 +67,7 @@ class Graph{
         }
         return currCapital;
     }
-
+    //Dfs auxiliar, para quando for necessário uma versão mais simples.
      void SimpleDfs(int startingVertex, vector<bool>& visited){
     
         if(visited[startingVertex]) return;
@@ -75,7 +77,8 @@ class Graph{
             if(!visited[neighbor]) SimpleDfs(neighbor, visited);
         }
     }
-
+    //Segunda Dfs usada no Kosaraju, calcula os componenentes conexos e descobre o vértice do batalhão
+    //do atual SCC percorrido.
     void Dfs(int startingVertex, vector<bool>& visited, stack<int>& s, 
     int& batalion, int& min_dist_to_capital, vector<vector<int>>& matrix, int capital){
     
@@ -92,6 +95,7 @@ class Graph{
         s.push(startingVertex);
     }
     
+    //Função usada no kosaraju para reverter o grafo
     void RevertGraph(){
 
         vector<list<int>> aux(vertices);
@@ -103,6 +107,7 @@ class Graph{
         adjList = aux;
     }
 
+    //Função que calcula os SCCS e descobre o vértice que cada batalhão estará.
     int FirstKosaraju(vector<int>& batalion_name, vector<vector<int>>& matrix, int capital){
 
         vector<bool> visited_1(vertices, false);
@@ -129,14 +134,6 @@ class Graph{
         RevertGraph();
         return counter;
     }
-
-    void ReachesCapital(int capital, vector<bool>& reaches){
-
-        RevertGraph();
-        SimpleDfs(capital, reaches);
-        RevertGraph();
-    }
-
 };
 
 int main(){
@@ -167,7 +164,6 @@ int main(){
     //1
 
     vector<vector<int>> matrix(v, vector<int>(v,INF));
-    vector<int> dist_from_capital(v, INF);
 
     int capital = g.FindCapital(matrix);
     cout<<reverse[capital]<<endl;
@@ -178,14 +174,10 @@ int main(){
     cout<<n_batalions - 1<<endl;
 
     //2.2
-    vector<bool> reaches_capital(v, false);
-    g.ReachesCapital(capital, reaches_capital);
-    
     for(int i = 0 ; i < n_batalions; i ++){
-        if(!reaches_capital[Batalions[i]] && Batalions[i] != capital) cout<<reverse[Batalions[i]]<<endl;
+        if(matrix[Batalions[i]][capital] == INF && Batalions[i] != capital) cout<<reverse[Batalions[i]]<<endl;
     }
     //3.1
     
 //PROBLEMAS ATUAIS: Critério de desempate do batalhão e parte 3.
-
 }
