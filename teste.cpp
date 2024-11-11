@@ -23,6 +23,7 @@ class Graph{
 
     }
 
+    // Registrando todas as distâncias caso seja necessário implementar o critério de empate.
     int Bfs(int startingNode, vector<vector<int>>& distances){
 
         vector<int> dist(vertices, -1);
@@ -50,13 +51,13 @@ class Graph{
         return maxDist;
     }
 
-    int FindCapital(vector<int>& dist_to_capital, vector<vector<int>>& matrix){
+    //Encontra a capital, calcula todas as distancias entre 2 vertices e a distancia ate a capital.
+    int FindCapital(vector<vector<int>>& matrix){
         
         int currCapital = 0;
         int MinDist = INF;
         for(int i = 0 ; i < vertices ; i ++){
             int currDist = Bfs(i, matrix);
-            dist_to_capital[i] = currDist;
             if(currDist < MinDist){
                 currCapital = i;
                 MinDist = currDist;
@@ -76,17 +77,17 @@ class Graph{
     }
 
     void Dfs(int startingVertex, vector<bool>& visited, stack<int>& s, 
-    int& batalion, int& min_dist_to_capital, vector<int>& dist_to_capital){
+    int& batalion, int& min_dist_to_capital, vector<vector<int>>& matrix, int capital){
     
         if(visited[startingVertex]) return;
         visited[startingVertex] = true;
 
-        if(dist_to_capital[startingVertex] < min_dist_to_capital){
+        if(matrix[capital][startingVertex] < min_dist_to_capital){
             batalion = startingVertex;
-            min_dist_to_capital = dist_to_capital[startingVertex];
+            min_dist_to_capital = matrix[capital][startingVertex];
         }
         for(auto& neighbor : adjList[startingVertex]){
-            if(!visited[neighbor]) Dfs(neighbor, visited, s, batalion, min_dist_to_capital, dist_to_capital);
+            if(!visited[neighbor]) Dfs(neighbor, visited, s, batalion, min_dist_to_capital, matrix, capital);
         }
         s.push(startingVertex);
     }
@@ -102,13 +103,13 @@ class Graph{
         adjList = aux;
     }
 
-    int FirstKosaraju(vector<int>& batalion_name, vector<int>& distances_to_capital){
+    int FirstKosaraju(vector<int>& batalion_name, vector<vector<int>>& matrix, int capital){
 
         vector<bool> visited_1(vertices, false);
         stack<int> s_1;
         int temp1 = 0, temp2 = 0;
         for(int i = 0 ; i < vertices ; i ++){
-            Dfs(i, visited_1, s_1, temp1, temp2, distances_to_capital);
+            Dfs(i, visited_1, s_1, temp1, temp2, matrix, capital);
         }
         RevertGraph();
         vector<bool> visited_2(vertices, false);
@@ -119,9 +120,9 @@ class Graph{
             s_1.pop();
             if(!visited_2[curr]){
                 int batalion = curr;
-                int batalion_dist_to_capital = distances_to_capital[curr];
+                int batalion_dist_to_capital = matrix[capital][curr];
                 counter++;
-                Dfs(curr, visited_2, s_2, batalion, batalion_dist_to_capital, distances_to_capital);
+                Dfs(curr, visited_2, s_2, batalion, batalion_dist_to_capital, matrix, capital);
                 batalion_name.push_back(batalion);
             }
         }
@@ -168,12 +169,12 @@ int main(){
     vector<vector<int>> matrix(v, vector<int>(v,INF));
     vector<int> dist_from_capital(v, INF);
 
-    int capital = g.FindCapital(dist_from_capital, matrix);
+    int capital = g.FindCapital(matrix);
     cout<<reverse[capital]<<endl;
 
     //2.1
     vector<int> Batalions;
-    int n_batalions = g.FirstKosaraju(Batalions, dist_from_capital);
+    int n_batalions = g.FirstKosaraju(Batalions, matrix, capital);
     cout<<n_batalions - 1<<endl;
 
     //2.2
