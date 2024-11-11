@@ -16,13 +16,14 @@ class Graph{
         vertices = i;
         adjList.resize(vertices);
     }
+
     void addEdge(int src, int dest){
         
         adjList[src].push_back(dest);
 
     }
 
-    int Bfs(int startingNode){
+    int Bfs(int startingNode, vector<vector<int>>& distances){
 
         vector<int> dist(vertices, -1);
         vector<bool> visited(vertices, false);
@@ -30,7 +31,7 @@ class Graph{
         int counter = 0;
         int maxDist = 0;
         
-        dist[startingNode] = 0;
+        distances[startingNode][startingNode] = 0;
         q.push(startingNode);
 
         while(!q.empty()){
@@ -41,21 +42,21 @@ class Graph{
             visited[curr] = true;
             for(auto& neighbor : adjList[curr]){
                 if(!visited[neighbor]) q.push(neighbor);
-                dist[neighbor] = dist[curr] + 1;
-                maxDist = max(maxDist, dist[neighbor]);
+                distances[startingNode][neighbor] = distances[startingNode][curr] + 1;
+                maxDist = max(maxDist, distances[startingNode][neighbor]);
             }
-        }       
+        }
         if(counter != vertices) return INF;
         return maxDist;
     }
 
-    int FindCapital(){
+    int FindCapital(vector<int>& dist_to_capital, vector<vector<int>>& matrix){
         
         int currCapital = 0;
         int MinDist = INF;
-
         for(int i = 0 ; i < vertices ; i ++){
-            int currDist = Bfs(i);
+            int currDist = Bfs(i, matrix);
+            dist_to_capital[i] = currDist;
             if(currDist < MinDist){
                 currCapital = i;
                 MinDist = currDist;
@@ -64,11 +65,28 @@ class Graph{
         return currCapital;
     }
 
-    void Dfs(int startingVertex, vector<bool>& visited, stack<int>& s){
+     void SimpleDfs(int startingVertex, vector<bool>& visited){
+    
         if(visited[startingVertex]) return;
         visited[startingVertex] = true;
+
         for(auto& neighbor : adjList[startingVertex]){
-            if(!visited[neighbor]) Dfs(neighbor, visited, s);
+            if(!visited[neighbor]) SimpleDfs(neighbor, visited);
+        }
+    }
+
+    void Dfs(int startingVertex, vector<bool>& visited, stack<int>& s, 
+    int& batalion, int& min_dist_to_capital, vector<int>& dist_to_capital){
+    
+        if(visited[startingVertex]) return;
+        visited[startingVertex] = true;
+
+        if(dist_to_capital[startingVertex] < min_dist_to_capital){
+            batalion = startingVertex;
+            min_dist_to_capital = dist_to_capital[startingVertex];
+        }
+        for(auto& neighbor : adjList[startingVertex]){
+            if(!visited[neighbor]) Dfs(neighbor, visited, s, batalion, min_dist_to_capital, dist_to_capital);
         }
         s.push(startingVertex);
     }
@@ -84,12 +102,13 @@ class Graph{
         adjList = aux;
     }
 
-    int FirstKosaraju(vector<int>& batalion_name){
+    int FirstKosaraju(vector<int>& batalion_name, vector<int>& distances_to_capital){
 
         vector<bool> visited_1(vertices, false);
         stack<int> s_1;
+        int temp1 = 0, temp2 = 0;
         for(int i = 0 ; i < vertices ; i ++){
-            Dfs(i, visited_1, s_1);
+            Dfs(i, visited_1, s_1, temp1, temp2, distances_to_capital);
         }
         RevertGraph();
         vector<bool> visited_2(vertices, false);
@@ -99,9 +118,11 @@ class Graph{
             int curr = s_1.top();
             s_1.pop();
             if(!visited_2[curr]){
-                batalion_name.push_back(curr);
+                int batalion = curr;
+                int batalion_dist_to_capital = distances_to_capital[curr];
                 counter++;
-                Dfs(curr, visited_2, s_2);
+                Dfs(curr, visited_2, s_2, batalion, batalion_dist_to_capital, distances_to_capital);
+                batalion_name.push_back(batalion);
             }
         }
         RevertGraph();
@@ -111,8 +132,7 @@ class Graph{
     void ReachesCapital(int capital, vector<bool>& reaches){
 
         RevertGraph();
-        stack<int> temp;
-        Dfs(capital, reaches, temp);
+        SimpleDfs(capital, reaches);
         RevertGraph();
     }
 
@@ -144,12 +164,16 @@ int main(){
         g.addEdge(map[src],map[dest]);
     }
     //1
-    int capital = g.FindCapital();
+
+    vector<vector<int>> matrix(v, vector<int>(v,INF));
+    vector<int> dist_from_capital(v, INF);
+
+    int capital = g.FindCapital(dist_from_capital, matrix);
     cout<<reverse[capital]<<endl;
 
     //2.1
     vector<int> Batalions;
-    int n_batalions = g.FirstKosaraju(Batalions);
+    int n_batalions = g.FirstKosaraju(Batalions, dist_from_capital);
     cout<<n_batalions - 1<<endl;
 
     //2.2
