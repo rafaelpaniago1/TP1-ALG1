@@ -149,25 +149,32 @@ class Graph{
         //MARCAR O WALKED DEPOIS
     }
 
-    void PatrolDFS(int target, int startingVertex, 
-                   int ancestor, vector<vector<int>>& previous,
-                   vector<bool>& visited){
-        
-        if(visited[startingVertex]) return;
-        visited[startingVertex] = true;
-        previous[target][startingVertex] = ancestor;
+    //Revisar essa função
+    void BfsPatrols(int startingVertex, vector<vector<int>>& previous){
+        vector<bool> visited(vertices,false);
+        queue<int> q;
+        q.push(startingVertex);
+        while(!q.empty()){
+            int curr = q.front();
+            q.pop();
+            if(visited[curr]) continue;
+            visited[curr] = true;
+            for(auto& neighbor : adjList[curr]){
 
-        for(auto& neighbor : adjList[startingVertex]){
-
-            if(!visited[neighbor]) PatrolDFS(target, neighbor, startingVertex, previous, visited);
+                if(!visited[neighbor]){
+                    q.push(neighbor);
+                    previous[startingVertex][neighbor] = curr;
+                }
+            }
         }
     }
+    //FIX THE FOLLOWING FUNCTION
 
     void RecordAllMinimalPaths(vector<vector<int>>& previous){
 
         for(int i = 0 ; i < vertices; i++){
             vector<bool> visited(vertices, false);
-            PatrolDFS(i, i, i, previous, visited);
+            BfsPatrols(i, previous);
         }
     }
 
@@ -229,6 +236,9 @@ int main(){
     }
     //3.1
     vector<vector<int>> previous(v, vector<int>(v,INF));
+    for(int i = 0 ; i < v ;i ++){
+        previous[i][i] = i;
+    }
     g.RecordAllMinimalPaths(previous);
     set<pair<int,int>> walked;
     g.WalkMinimalPath(1 , 2, previous, reverse, walked);
