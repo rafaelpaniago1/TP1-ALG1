@@ -135,6 +135,45 @@ class Graph{
         RevertGraph();
         return counter;
     }
+    //PARTE 3
+
+
+    void WalkMinimalPath(int target, int startingVertex, 
+                         vector<vector<int>>& previous, 
+                         unordered_map<int,string>& reverse, 
+                         set<pair<int,int>>& walked){
+                        
+        if(startingVertex == target) return;
+        WalkMinimalPath(target, previous[target][startingVertex], previous, reverse, walked);
+        cout << reverse[startingVertex]<<" ";
+        //MARCAR O WALKED DEPOIS
+    }
+
+    void PatrolDFS(int target, int startingVertex, 
+                   int ancestor, vector<vector<int>>& previous,
+                   vector<bool>& visited){
+        
+        if(visited[startingVertex]) return;
+        visited[startingVertex] = true;
+        previous[target][startingVertex] = ancestor;
+
+        for(auto& neighbor : adjList[startingVertex]){
+
+            if(!visited[neighbor]) PatrolDFS(target, neighbor, startingVertex, previous, visited);
+        }
+    }
+
+    void RecordAllMinimalPaths(vector<vector<int>>& previous){
+
+        for(int i = 0 ; i < vertices; i++){
+            vector<bool> visited(vertices, false);
+            PatrolDFS(i, i, i, previous, visited);
+        }
+    }
+
+    //Fazer Segundo Kosaraju, que calcula o SCC, adiciona as arestas a serem percorridas e segue a lógica
+    //do Gustavo.  
+
 };
 
 int main(){
@@ -178,5 +217,8 @@ int main(){
         if(matrix[Batalions[i]][capital] == INF && Batalions[i] != capital) cout<<reverse[Batalions[i]]<<endl;
     }
     //3.1
-    
+    vector<vector<int>> previous(v, vector<int>(v,INF));
+    g.RecordAllMinimalPaths(previous);
+    set<pair<int,int>> walked;
+    g.WalkMinimalPath(1 , 2, previous, reverse, walked);
 }
