@@ -171,6 +171,17 @@ class Graph{
         }
     }
 
+    void DfsSecondKosaraju(int startingVertex, set<pair<int,int>>& edges, vector<bool>& visited){
+
+        if(visited[startingVertex]) return;
+        visited[startingVertex] = true;
+        for(auto& neighbor : adjList[startingVertex]){
+            
+            //Isso aqui está invertido pois será usado mais tarde no Grafo Invertido.
+            edges.insert({neighbor, startingVertex});
+            if(!visited[neighbor]) DfsSecondKosaraju(neighbor, edges, visited);
+        }
+    }
     //Fazer Segundo Kosaraju, que calcula o SCC, adiciona as arestas a serem percorridas e segue a lógica
     //do Gustavo.  
 
