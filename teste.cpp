@@ -11,18 +11,43 @@ class Graph{
     public:
 
     int vertices;
-    vector<list<int>> adjList;
+    vector<list<pair<int,int>>> adjList;
+    vector<int> colors;
+    unordered_map<int, list<int>> SCC_Components;
+    vector<pair<int,int>> edges_list;
+    vector<pair<int,int>> batalions;
+    int E = 0;
+    int patrols = 0;
+
     Graph(int i){
         vertices = i;
         adjList.resize(vertices);
+        colors.resize(vertices);
     }
 
     void addEdge(int src, int dest){
+        E++;
+        adjList[src].push_back({dest,E});
+        edges_list.push_back({src,dest});
         
-        adjList[src].push_back(dest);
-
     }
 
+    Graph* transpose()
+{
+    Graph* Gt=new Graph(vertices);
+
+    for(int u=0;u<vertices;u++)
+        for(auto& edge:adjList[u])
+            {
+                Gt->adjList[edge.first].emplace_back(u,edge.second);
+            }
+    Gt->colors=colors;
+
+    for(const auto&edge:edges_list)
+        Gt->edges_list.emplace_back(edge.second,edge.first);
+
+    return(Gt);
+}
     // Visita todos os vértices em relação a startingNode e registra a distância deles em distances,
     // para caso seja necessário a adoção de critérios de desempate na decisão do vértice do batalhão.
     int Bfs(int startingNode, vector<vector<int>>& distances){
@@ -42,10 +67,10 @@ class Graph{
             counter++;
             visited[curr] = true;
             for(auto& neighbor : adjList[curr]){
-                if(!visited[neighbor]){
-                    q.push(neighbor);
-                    distances[startingNode][neighbor] = distances[startingNode][curr] + 1;
-                    maxDist = max(maxDist, distances[startingNode][neighbor]);
+                if(!visited[neighbor.first]){
+                    q.push(neighbor.first);
+                    distances[startingNode][neighbor.first] = distances[startingNode][curr] + 1;
+                    maxDist = max(maxDist, distances[startingNode][neighbor.first]);
                 } 
             }
         }
@@ -67,60 +92,68 @@ class Graph{
         }
         return currCapital;
     }
-    //Dfs auxiliar, para quando for necessário uma versão mais simples.
-     void SimpleDfs(int startingVertex, vector<bool>& visited){
-    
-        if(visited[startingVertex]) return;
-        visited[startingVertex] = true;
 
-        for(auto& neighbor : adjList[startingVertex]){
-            if(!visited[neighbor]) SimpleDfs(neighbor, visited);
-        }
-    }
     //Segunda Dfs usada no Kosaraju, calcula os componenentes conexos e descobre o vértice do batalhão
     //do atual SCC percorrido.
     void Dfs(int startingVertex, vector<bool>& visited, stack<int>& s, 
-    int& batalion, int& min_dist_to_capital, vector<vector<int>>& matrix, int capital){
+    int& batalion, int& min_dist_to_capital, vector<vector<int>>& matrix, int capital,
+    int& color_control, bool color_bool, int& number_of_components){
     
         if(visited[startingVertex]) return;
         visited[startingVertex] = true;
 
+        number_of_components++;
         if(matrix[capital][startingVertex] < min_dist_to_capital){
             batalion = startingVertex;
             min_dist_to_capital = matrix[capital][startingVertex];
         }
         for(auto& neighbor : adjList[startingVertex]){
-            if(!visited[neighbor]) Dfs(neighbor, visited, s, batalion, min_dist_to_capital, matrix, capital);
+            if(!visited[neighbor.first]) Dfs(neighbor.first, visited, s, batalion, min_dist_to_capital, matrix, capital, color_control, color_bool, number_of_components);
         }
         s.push(startingVertex);
+        if(color_bool){
+            colors[startingVertex] = color_control;
+            SCC_Components[color_control].push_back(startingVertex);
+        } 
     }
-    
-    //Função usada no kosaraju para reverter o grafo
-    void RevertGraph(){
 
-        vector<list<int>> aux(vertices);
-        for(int i = 0 ; i < vertices ; i++){
-            for(auto& neighbor : adjList[i]){
-                aux[neighbor].push_back(i);
+    void reverseGraph() {
+        // Cria uma nova lista de adjacência para armazenar o grafo revertido
+        vector<list<pair<int, int>>> reversedAdjList(vertices);
+
+        // Itera sobre cada vértice e sua lista de adjacência
+        for (int src = 0; src < vertices; src++) {
+            for (auto& edge : adjList[src]) {
+                int dest = edge.first;
+                int edge_id = edge.second;
+
+                // Adiciona a aresta invertida na nova lista de adjacência
+                reversedAdjList[dest].push_back({src, edge_id});
+                
             }
         }
-        adjList = aux;
+        // Substitui a lista de adjacência original pelo grafo revertido
+        adjList = reversedAdjList;
+        for(const auto&edge:edges_list) edges_list.emplace_back(edge.second,edge.first);
     }
+
 
     //Função que calcula os SCCS e descobre o vértice que cada batalhão estará.
     //Caso seja necessário vou implementar o negócio de 
-    int FirstKosaraju(vector<int>& batalion_name, vector<vector<int>>& matrix, int capital){
-
+    int Kosaraju(vector<vector<int>>& matrix, int capital){
+        
+        int control_colors = 0;
         vector<bool> visited_1(vertices, false);
         stack<int> s_1;
-        int temp1 = 0, temp2 = 0;
+        int temp1 = 0;
         for(int i = 0 ; i < vertices ; i ++){
-            Dfs(i, visited_1, s_1, temp1, temp2, matrix, capital);
+            Dfs(i, visited_1, s_1, temp1, temp1, matrix, capital, temp1, false, temp1);
         }
-        RevertGraph();
+        reverseGraph();
         vector<bool> visited_2(vertices, false);
         stack<int> s_2;
         int counter = 0;
+        int color_control = 0;
         while(!s_1.empty()){
             int curr = s_1.top();
             s_1.pop();
@@ -128,72 +161,120 @@ class Graph{
                 int batalion = curr;
                 int batalion_dist_to_capital = matrix[capital][curr];
                 counter++;
-                Dfs(curr, visited_2, s_2, batalion, batalion_dist_to_capital, matrix, capital);
-                batalion_name.push_back(batalion);
+                int number_of_components = 0;
+                Dfs(curr, visited_2, s_2, batalion, batalion_dist_to_capital, matrix, capital, color_control, true, number_of_components);
+                if(number_of_components != 1)patrols++;
+                batalions.push_back({batalion,number_of_components});
             }
+            color_control++;
         }
-        RevertGraph();
+        reverseGraph();
         return counter;
     }
     //PARTE 3
-    //VAMO CARALHO PORRA
+    
+void bfs_parentage(int s, vector<pair<int,int>>&P)
+{
+    vector<bool>visit(vertices,0);
+    queue<int>q;
 
+    q.push(s);
+    visit[s]=1;
+    P[s]={-1,-1};
 
-//Revisar essa função
-    void BfsPatrols(int startingVertex, vector<vector<int>>& previous){
-        vector<bool> visited(vertices,false);
-        queue<int> q;
-        q.push(startingVertex);
-        while(!q.empty()){
-            int curr = q.front();
-            q.pop();
-            if(visited[curr]) continue;
-            visited[curr] = true;
-            for(auto& neighbor : adjList[curr]){
+    while(!q.empty())
+    {
+        int u=q.front();
+        q.pop();
+        for(const auto&edge:adjList[u])
+        {
+            int v=edge.first;
+            int edge_id=edge.second;
+            if(colors[v]==colors[s] and !visit[v])
+            {
+                visit[v]=1;
 
-                if(!visited[neighbor]){
-                    q.push(neighbor);
-                    previous[startingVertex][neighbor] = curr;
-                }
+                P[v] = {u,edge_id};
+
+                q.push(v);
             }
         }
     }
-    //FIX THE FOLLOWING FUNCTION
+}
 
-    void RecordAllMinimalPaths(vector<vector<int>>& previous){
-
-        for(int i = 0 ; i < vertices; i++){
-            vector<bool> visited(vertices, false);
-            BfsPatrols(i, previous);
-        }
-    }
+// metodo   : path_patrol
+// descricao    : para uma SCC a partir de um batalhao descreve um circuito visitando todas as aretas da SCC
+void path_patrol(int s,unordered_map<int,string> reverse_map)
+{
+    vector<pair<int,int>>from_battalion(vertices);
+    vector<pair<int,int>>to_battalion(vertices);
+    vector<int>patrol;
+    vector<int>edges;
+    vector<bool>visit(E,0);
     
+    Graph* Gt=transpose();
 
-    void DfsSecondKosaraju(int startingVertex, Graph& SCC, vector<bool>& visited, list<pair<int,int>>& edges){
+    
+    for(int u : SCC_Components[colors[s]])
+        for(const auto&edge:adjList[u])
+            if(colors[edge.first]==colors[s])
+                edges.push_back(edge.second);
 
-        if(visited[startingVertex]) return;
-        visited[startingVertex] = true;
-        for(auto& neighbor : adjList[startingVertex]){
-            SCC.adjList[neighbor].push_back(startingVertex);
-            edges.push_back({neighbor, startingVertex});
-            if(!visited[neighbor]) DfsSecondKosaraju(neighbor, SCC, visited, edges);
+    bfs_parentage(s,from_battalion);
+    Gt->bfs_parentage(s,to_battalion);
+
+    for(int i:edges)
+    {
+        if(visit[i])continue;
+
+        int u=edges_list[i].first;
+        int v=edges_list[i].second;
+
+        int w=u;
+        vector<int>path;
+        while(w!=s)
+        {
+            w=from_battalion[w].first;
+            int e = from_battalion[w].second;
+            if(e!=-1)visit[e]=1;
+            path.push_back(w);
         }
+        reverse(path.begin(),path.end());
+        path.push_back(u);
+        path.push_back(v);
+        visit[i]=1;
+
+        w=v;
+        while(w!=s)
+        {
+            int e=to_battalion[w].second;
+            w=to_battalion[w].first;
+            if(e!=-1)visit[e]=1;
+            path.push_back(w);
+        }
+        for(int j:path)
+            patrol.push_back(j);
     }
 
-    void SecondKosaraju(vector<int>& Batalions, vector<vector<int>>& previous){
+    for(int i=0;i<((int)patrol.size())-1;i++)
+    {
+        if(i>0 and patrol[i]==patrol[i-1])continue;
 
-        RevertGraph();
-        for(int i = 0 ; i < Batalions.size();i++){
-
-            int curr = Batalions[i];
-            Graph SCC(vertices);
-            vector<bool>visited(vertices, false);
-            list<pair<int,int>> edges;
-            DfsSecondKosaraju(curr, SCC, visited, edges);
-
-        }
-        
+        cout<<reverse_map[patrol[i]]<<" ";
     }
+    cout<<endl;
+}
+
+
+// metodo   : determine_patrols
+// descricao    : simplesmente faz a chamada de path_patrol para os batalhoes onde se aplica
+void determine_patrols(unordered_map<int,string> reverse_map)
+{
+    cout<<patrols<<endl;
+    for(size_t i=0; i<batalions.size(); i++)
+        if(batalions[i].second>1)
+            path_patrol(batalions[i].first, reverse_map);
+}
 };
 
 int main(){
@@ -228,19 +309,13 @@ int main(){
     cout<<reverse[capital]<<endl;
 
     //2.1
-    vector<int> Batalions;
-    int n_batalions = g.FirstKosaraju(Batalions, matrix, capital);
+    int n_batalions = g.Kosaraju(matrix, capital);
     cout<<n_batalions - 1<<endl;
 
     //2.2
     for(int i = 0 ; i < n_batalions; i ++){
-        if(matrix[Batalions[i]][capital] == INF && Batalions[i] != capital) cout<<reverse[Batalions[i]]<<endl;
+        if(matrix[g.batalions[i].first][capital] == INF && g.batalions[i].first != capital) cout<<reverse[g.batalions[i].first]<<endl;
     }
     //3.1
-    vector<vector<int>> previous(v, vector<int>(v,INF));
-    for(int i = 0 ; i < v ;i ++){
-        previous[i][i] = i;
-    }
-    g.RecordAllMinimalPaths(previous);
-    set<pair<int,int>> walked;
+    g.determine_patrols(reverse);
 }
