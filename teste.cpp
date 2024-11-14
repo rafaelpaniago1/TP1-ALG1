@@ -118,24 +118,16 @@ class Graph{
     }
 
     void reverseGraph() {
-        // Cria uma nova lista de adjacência para armazenar o grafo revertido
-        vector<list<pair<int, int>>> reversedAdjList(vertices);
+    vector<list<pair<int, int>>> reversedAdjList(vertices);
 
-        // Itera sobre cada vértice e sua lista de adjacência
-        for (int src = 0; src < vertices; src++) {
-            for (auto& edge : adjList[src]) {
-                int dest = edge.first;
-                int edge_id = edge.second;
-
-                // Adiciona a aresta invertida na nova lista de adjacência
-                reversedAdjList[dest].push_back({src, edge_id});
-                
-            }
+    for (int src = 0; src < vertices; src++) {
+        for (auto& edge : adjList[src]) {
+            int dest = edge.first;
+            reversedAdjList[dest].push_back({src, edge.second});
         }
-        // Substitui a lista de adjacência original pelo grafo revertido
-        adjList = reversedAdjList;
-        for(const auto&edge:edges_list) edges_list.emplace_back(edge.second,edge.first);
     }
+    adjList = reversedAdjList;
+}
 
 
     //Função que calcula os SCCS e descobre o vértice que cada batalhão estará.
@@ -204,66 +196,47 @@ class Graph{
 
     // metodo   : path_patrol
     // descricao    : para uma SCC a partir de um batalhao descreve um circuito visitando todas as aretas da SCC
-    void path_patrol(int s,unordered_map<int,string> reverse_map)
-    {
-        vector<pair<int,int>>from_battalion(vertices);
-        vector<pair<int,int>>to_battalion(vertices);
-        vector<int>patrol;
-        vector<int>edges;
-        vector<bool>visit(E,0);
-        
-        Graph* Gt=transpose();
+    void path_patrol(int s, unordered_map<int, string> reverse_map) {
+    vector<bool> visit(E, false);  // Mark edges as visited
+    vector<int> patrol;
+    vector<pair<int, int>> from_battalion(vertices), to_battalion(vertices);
 
-        
-        for(int u : SCC_Components[colors[s]])
-            for(const auto&edge:adjList[u])
-                if(colors[edge.first]==colors[s])
-                    edges.push_back(edge.second);
+    Graph* Gt = transpose();
 
-        bfs_parentage(s,from_battalion);
-        Gt->bfs_parentage(s,to_battalion);
+    bfs_parentage(s, from_battalion);
+    Gt->bfs_parentage(s, to_battalion);
 
-        for(int i:edges)
-        {
-            if(visit[i])continue;
+    for (int u : SCC_Components[colors[s]]) {
+        for (const auto& edge : adjList[u]) {
+            if (colors[edge.first] == colors[s] && !visit[edge.second]) {
+                int w = u;
+                vector<int> path;
+                
+                while (w != s) {
+                    w = from_battalion[w].first;
+                    path.push_back(w);
+                }
+                reverse(path.begin(), path.end());
+                path.push_back(u);
+                path.push_back(edge.first);
+                
+                // Mark edges as visited
+                visit[edge.second] = true;
 
-            int u=edges_list[i].first;
-            int v=edges_list[i].second;
-
-            int w=u;
-            vector<int>path;
-            while(w!=s)
-            {
-                w=from_battalion[w].first;
-                int e = from_battalion[w].second;
-                if(e!=-1)visit[e]=1;
-                path.push_back(w);
+                for (int p : path) {
+                    patrol.push_back(p);
+                }
             }
-            reverse(path.begin(),path.end());
-            path.push_back(u);
-            path.push_back(v);
-            visit[i]=1;
-
-            w=v;
-            while(w!=s)
-            {
-                int e=to_battalion[w].second;
-                w=to_battalion[w].first;
-                if(e!=-1)visit[e]=1;
-                path.push_back(w);
-            }
-            for(int j:path)
-                patrol.push_back(j);
         }
-
-        for(int i=0;i<((int)patrol.size())-1;i++)
-        {
-            if(i>0 and patrol[i]==patrol[i-1])continue;
-
-            cout<<reverse_map[patrol[i]]<<" ";
-        }
-        cout<<endl;
     }
+
+    // Print patrol path, avoiding duplicates
+    for (int i = 0; i < patrol.size() - 1; i++) {
+        if (i > 0 && patrol[i] == patrol[i - 1]) continue;  // Avoid duplicates
+        cout << reverse_map[patrol[i]] << " ";
+    }
+    cout << endl;
+}
 
 
     // metodo   : determine_patrols
