@@ -136,20 +136,10 @@ class Graph{
         return counter;
     }
     //PARTE 3
+    //VAMO CARALHO PORRA
 
 
-    void WalkMinimalPath(int target, int startingVertex, 
-                         vector<vector<int>>& previous, 
-                         unordered_map<int,string>& reverse, 
-                         set<pair<int,int>>& walked){
-                        
-        if(startingVertex == target) return;
-        WalkMinimalPath(target, previous[target][startingVertex], previous, reverse, walked);
-        cout << reverse[startingVertex]<<" ";
-        //MARCAR O WALKED DEPOIS
-    }
-
-    //Revisar essa função
+//Revisar essa função
     void BfsPatrols(int startingVertex, vector<vector<int>>& previous){
         vector<bool> visited(vertices,false);
         queue<int> q;
@@ -177,21 +167,33 @@ class Graph{
             BfsPatrols(i, previous);
         }
     }
+    
 
-    void DfsSecondKosaraju(int startingVertex, set<pair<int,int>>& edges, vector<bool>& visited){
+    void DfsSecondKosaraju(int startingVertex, Graph& SCC, vector<bool>& visited, list<pair<int,int>>& edges){
 
         if(visited[startingVertex]) return;
         visited[startingVertex] = true;
         for(auto& neighbor : adjList[startingVertex]){
-            
-            //Isso aqui está invertido pois será usado mais tarde no Grafo Invertido.
-            edges.insert({neighbor, startingVertex});
-            if(!visited[neighbor]) DfsSecondKosaraju(neighbor, edges, visited);
+            SCC.adjList[neighbor].push_back(startingVertex);
+            edges.push_back({neighbor, startingVertex});
+            if(!visited[neighbor]) DfsSecondKosaraju(neighbor, SCC, visited, edges);
         }
     }
-    //Fazer Segundo Kosaraju, que calcula o SCC, adiciona as arestas a serem percorridas e segue a lógica
-    //do Gustavo.  
 
+    void SecondKosaraju(vector<int>& Batalions, vector<vector<int>>& previous){
+
+        RevertGraph();
+        for(int i = 0 ; i < Batalions.size();i++){
+
+            int curr = Batalions[i];
+            Graph SCC(vertices);
+            vector<bool>visited(vertices, false);
+            list<pair<int,int>> edges;
+            DfsSecondKosaraju(curr, SCC, visited, edges);
+
+        }
+        
+    }
 };
 
 int main(){
@@ -241,5 +243,4 @@ int main(){
     }
     g.RecordAllMinimalPaths(previous);
     set<pair<int,int>> walked;
-    g.WalkMinimalPath(1 , 2, previous, reverse, walked);
 }
