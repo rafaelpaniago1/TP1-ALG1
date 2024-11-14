@@ -173,108 +173,108 @@ class Graph{
     }
     //PARTE 3
     
-void bfs_parentage(int s, vector<pair<int,int>>&P)
-{
-    vector<bool>visit(vertices,0);
-    queue<int>q;
-
-    q.push(s);
-    visit[s]=1;
-    P[s]={-1,-1};
-
-    while(!q.empty())
+    void bfs_parentage(int s, vector<pair<int,int>>&P)
     {
-        int u=q.front();
-        q.pop();
-        for(const auto&edge:adjList[u])
+        vector<bool>visit(vertices,0);
+        queue<int>q;
+
+        q.push(s);
+        visit[s]=1;
+        P[s]={-1,-1};
+
+        while(!q.empty())
         {
-            int v=edge.first;
-            int edge_id=edge.second;
-            if(colors[v]==colors[s] and !visit[v])
+            int u=q.front();
+            q.pop();
+            for(const auto&edge:adjList[u])
             {
-                visit[v]=1;
+                int v=edge.first;
+                int edge_id=edge.second;
+                if(colors[v]==colors[s] and !visit[v])
+                {
+                    visit[v]=1;
 
-                P[v] = {u,edge_id};
+                    P[v] = {u,edge_id};
 
-                q.push(v);
+                    q.push(v);
+                }
             }
         }
     }
-}
 
-// metodo   : path_patrol
-// descricao    : para uma SCC a partir de um batalhao descreve um circuito visitando todas as aretas da SCC
-void path_patrol(int s,unordered_map<int,string> reverse_map)
-{
-    vector<pair<int,int>>from_battalion(vertices);
-    vector<pair<int,int>>to_battalion(vertices);
-    vector<int>patrol;
-    vector<int>edges;
-    vector<bool>visit(E,0);
-    
-    Graph* Gt=transpose();
-
-    
-    for(int u : SCC_Components[colors[s]])
-        for(const auto&edge:adjList[u])
-            if(colors[edge.first]==colors[s])
-                edges.push_back(edge.second);
-
-    bfs_parentage(s,from_battalion);
-    Gt->bfs_parentage(s,to_battalion);
-
-    for(int i:edges)
+    // metodo   : path_patrol
+    // descricao    : para uma SCC a partir de um batalhao descreve um circuito visitando todas as aretas da SCC
+    void path_patrol(int s,unordered_map<int,string> reverse_map)
     {
-        if(visit[i])continue;
+        vector<pair<int,int>>from_battalion(vertices);
+        vector<pair<int,int>>to_battalion(vertices);
+        vector<int>patrol;
+        vector<int>edges;
+        vector<bool>visit(E,0);
+        
+        Graph* Gt=transpose();
 
-        int u=edges_list[i].first;
-        int v=edges_list[i].second;
+        
+        for(int u : SCC_Components[colors[s]])
+            for(const auto&edge:adjList[u])
+                if(colors[edge.first]==colors[s])
+                    edges.push_back(edge.second);
 
-        int w=u;
-        vector<int>path;
-        while(w!=s)
+        bfs_parentage(s,from_battalion);
+        Gt->bfs_parentage(s,to_battalion);
+
+        for(int i:edges)
         {
-            w=from_battalion[w].first;
-            int e = from_battalion[w].second;
-            if(e!=-1)visit[e]=1;
-            path.push_back(w);
-        }
-        reverse(path.begin(),path.end());
-        path.push_back(u);
-        path.push_back(v);
-        visit[i]=1;
+            if(visit[i])continue;
 
-        w=v;
-        while(w!=s)
-        {
-            int e=to_battalion[w].second;
-            w=to_battalion[w].first;
-            if(e!=-1)visit[e]=1;
-            path.push_back(w);
+            int u=edges_list[i].first;
+            int v=edges_list[i].second;
+
+            int w=u;
+            vector<int>path;
+            while(w!=s)
+            {
+                w=from_battalion[w].first;
+                int e = from_battalion[w].second;
+                if(e!=-1)visit[e]=1;
+                path.push_back(w);
+            }
+            reverse(path.begin(),path.end());
+            path.push_back(u);
+            path.push_back(v);
+            visit[i]=1;
+
+            w=v;
+            while(w!=s)
+            {
+                int e=to_battalion[w].second;
+                w=to_battalion[w].first;
+                if(e!=-1)visit[e]=1;
+                path.push_back(w);
+            }
+            for(int j:path)
+                patrol.push_back(j);
         }
-        for(int j:path)
-            patrol.push_back(j);
+
+        for(int i=0;i<((int)patrol.size())-1;i++)
+        {
+            if(i>0 and patrol[i]==patrol[i-1])continue;
+
+            cout<<reverse_map[patrol[i]]<<" ";
+        }
+        cout<<endl;
     }
 
-    for(int i=0;i<((int)patrol.size())-1;i++)
+
+    // metodo   : determine_patrols
+    // descricao    : simplesmente faz a chamada de path_patrol para os batalhoes onde se aplica
+    void determine_patrols(unordered_map<int,string> reverse_map)
     {
-        if(i>0 and patrol[i]==patrol[i-1])continue;
-
-        cout<<reverse_map[patrol[i]]<<" ";
+        cout<<patrols<<endl;
+        for(size_t i=0; i<batalions.size(); i++)
+            if(batalions[i].second>1)
+                path_patrol(batalions[i].first, reverse_map);
     }
-    cout<<endl;
-}
-
-
-// metodo   : determine_patrols
-// descricao    : simplesmente faz a chamada de path_patrol para os batalhoes onde se aplica
-void determine_patrols(unordered_map<int,string> reverse_map)
-{
-    cout<<patrols<<endl;
-    for(size_t i=0; i<batalions.size(); i++)
-        if(batalions[i].second>1)
-            path_patrol(batalions[i].first, reverse_map);
-}
 };
 
 int main(){
