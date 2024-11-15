@@ -161,54 +161,45 @@ public:
     }
 
     void path_patrol(int s, unordered_map<int, string>& reverse_map) {
-    vector<bool> visitedEdges(E + 1, false); // Mark edges as visited
-    vector<int> patrolPath;
-    stack<int> stack;
+        unordered_set<int> visitedNodes;
+        unordered_set<int> visitedEdges;
+        vector<int> patrolPath;
+        stack<int> stack;
+
+        stack.push(s);
+
+        while (!stack.empty()) {
+            int curr = stack.top();
+            stack.pop();
     
-    // Start DFS from the battalion vertex `s`
-    stack.push(s);
+            visitedNodes.insert(curr);
+            patrolPath.push_back(curr);
 
-    while (!stack.empty()) {
-        int curr = stack.top();
-        bool hasUnvisitedEdge = false;
+            for (auto& edge : adjList[curr]) {
+                int neighbor = edge.first;
+                int edgeId = edge.second;
 
-        for (auto& edge : adjList[curr]) {
-            int neighbor = edge.first;
-            int edgeId = edge.second;
-
-            // If the edge belongs to the same SCC and hasn't been visited
-            if (colors[neighbor] == colors[s] && !visitedEdges[edgeId]) {
-                visitedEdges[edgeId] = true; // Mark the edge as visited
-                stack.push(neighbor); // Move to the next vertex
-                hasUnvisitedEdge = true;
-                break;
+                if (!visitedEdges.count(edgeId) && colors[neighbor] == colors[s]) {
+                    visitedEdges.insert(edgeId);
+                    stack.push(neighbor);
+                }
             }
         }
 
-        // If no unvisited edges are found, backtrack
-        if (!hasUnvisitedEdge) {
-            patrolPath.push_back(curr);
-            stack.pop();
+        for (int node : patrolPath) {
+            cout << reverse_map[node] << " ";
         }
+        cout << endl;
     }
-
-    // Output the patrol path, avoiding duplicates
-    for (size_t i = 0; i < patrolPath.size(); i++) {
-        if (i > 0 && patrolPath[i] == patrolPath[i - 1]) continue; // Avoid duplicates
-        cout << reverse_map[patrolPath[i]] << " ";
-    }
-    cout << endl;
-}
-
 
     void determine_patrols(unordered_map<int, string>& reverse_map) {
-    cout << patrols << endl;
-    for (size_t i = 0; i < batalions.size(); i++) {
-        if (batalions[i].second > 1) {
-            path_patrol(batalions[i].first, reverse_map);
+        cout << patrols << endl;
+        for (size_t i = 0; i < batalions.size(); i++) {
+            if (batalions[i].second > 1) {
+                path_patrol(batalions[i].first, reverse_map);
+            }
         }
     }
-}
 };
 
 int main() {
@@ -233,7 +224,7 @@ int main() {
             counter++;
         }
         g.addEdge(map[src], map[dest]);
-    }   
+    }
 
     vector<vector<int>> matrix(v, vector<int>(v, INF));
     int capital = g.FindCapital(matrix);
@@ -250,4 +241,4 @@ int main() {
 
     g.determine_patrols(reverse);
     return 0;
-}   
+}
