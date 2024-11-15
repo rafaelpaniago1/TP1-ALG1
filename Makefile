@@ -2,7 +2,7 @@
 CXX = g++
 
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -O2 -std=c++11
+CXXFLAGS = -Wall -Wextra -Wpedantic -Wformat-security -Wconversion -Werror -O2 -std=c++11
 
 # Target executable
 TARGET = tp1
