@@ -1,244 +1,324 @@
 #include <bits/stdc++.h>
-#define _ ios_base::sync_with_stdio(0); cin.tie(0); cout.tie(0);
 using namespace std;
 
-typedef long long ll;
-const int INF = 0x3f3f3f3f;
+class Graph{
+    public:
 
-class Graph {
-public:
     int vertices;
-    vector<list<pair<int, int>>> adjList;
+    vector<vector<int>> adjList;
     vector<int> colors;
-    unordered_map<int, list<int>> SCC_Components;
-    vector<pair<int, int>> edges_list;
-    vector<pair<int, int>> batalions;
-    int E = 0;
+    unordered_map<int, vector<int>> SCC_Components;
+    vector<pair<int,int>> batalions;
     int patrols = 0;
+    unordered_map<string,int> map;
+    unordered_map<int, int> node_index;
+    int capital; // Adicionar a capital como membro da classe
 
-    Graph(int i) {
+    Graph(int i){
         vertices = i;
         adjList.resize(vertices);
-        colors.resize(vertices, -1);
+        colors.resize(vertices);
     }
 
-    void addEdge(int src, int dest) {
-        E++;
-        adjList[src].emplace_back(dest, E);
-        edges_list.emplace_back(src, dest);
+    void addEdge(int src, int dest){
+        adjList[src].push_back(dest);
     }
 
-    Graph* transpose() {
+    Graph* transpose(){
         Graph* Gt = new Graph(vertices);
-        for (int u = 0; u < vertices; ++u) {
-            for (auto& edge : adjList[u]) {
-                int v = edge.first;
-                Gt->addEdge(v, u);
+
+        for(int u = 0; u < vertices; u++)
+            for(int v : adjList[u]){
+                Gt->adjList[v].push_back(u);
             }
-        }
+        Gt->colors = colors;
+
         return Gt;
     }
 
-    int Bfs(int startingNode, vector<vector<int>>& distances) {
+    void Bfs(int startingNode, vector<int>& distances, vector<vector<int>>& adj){
         vector<bool> visited(vertices, false);
         queue<int> q;
-        int counter = 0, maxDist = 0;
 
-        distances[startingNode][startingNode] = 0;
+        distances[startingNode] = 0;
         q.push(startingNode);
 
-        while (!q.empty()) {
+        while(!q.empty()){
             int curr = q.front();
             q.pop();
 
-            if (visited[curr]) continue;
+            if(visited[curr]) continue;
             visited[curr] = true;
-            counter++;
 
-            for (auto& neighbor : adjList[curr]) {
-                int next = neighbor.first;
-                if (!visited[next]) {
-                    q.push(next);
-                    distances[startingNode][next] = distances[startingNode][curr] + 1;
-                    maxDist = max(maxDist, distances[startingNode][next]);
-                }
+            for(int neighbor : adj[curr]){
+                if(distances[neighbor] > distances[curr] + 1){
+                    distances[neighbor] = distances[curr] + 1;
+                    q.push(neighbor);
+                } 
             }
         }
-
-        if (counter != vertices) return INF;
-        return maxDist;
     }
 
-    int FindCapital(vector<vector<int>>& matrix) {
-        int currCapital = 0, MinDist = INF;
-        for (int i = 0; i < vertices; ++i) {
-            int currDist = Bfs(i, matrix);
-            if (currDist < MinDist) {
+    int FindCapital(){
+        int currCapital = 0;
+        int MinDist = INT_MAX;
+
+        for(int i = 0 ; i < vertices ; i++){
+            vector<int> distances(vertices, INT_MAX);
+            Bfs(i, distances, adjList);
+
+            int currDist = *max_element(distances.begin(), distances.end());
+
+            if(currDist < MinDist){
                 currCapital = i;
                 MinDist = currDist;
-            }
+            } 
         }
+
         return currCapital;
     }
 
-    void Dfs(int startingVertex, vector<bool>& visited, stack<int>& s, 
-             int& batalion, int& min_dist_to_capital, vector<vector<int>>& matrix, int capital, 
-             int& color_control, bool color_bool, int& number_of_components) {
-        if (visited[startingVertex]) return;
-        visited[startingVertex] = true;
-        number_of_components++;
-
-        if (matrix[capital][startingVertex] < min_dist_to_capital) {
-            batalion = startingVertex;
-            min_dist_to_capital = matrix[capital][startingVertex];
-        }
-
-        for (auto& neighbor : adjList[startingVertex]) {
-            if (!visited[neighbor.first]) {
-                Dfs(neighbor.first, visited, s, batalion, min_dist_to_capital, matrix, capital, color_control, color_bool, number_of_components);
-            }
-        }
-        s.push(startingVertex);
-        if (color_bool) {
-            colors[startingVertex] = color_control;
-            SCC_Components[color_control].push_back(startingVertex);
-        }
+    void fillOrder(int v, vector<bool>& visited, stack<int>& Stack){
+        visited[v] = true;
+        for(int neighbor : adjList[v])
+            if(!visited[neighbor])
+                fillOrder(neighbor, visited, Stack);
+        Stack.push(v);
     }
 
-    int Kosaraju(vector<vector<int>>& matrix, int capital) {
-        vector<bool> visited(vertices, false);
-        stack<int> s;
-
-        for (int i = 0; i < vertices; ++i) {
-            if (!visited[i]) {
-                int dummy = 0;
-                Dfs(i, visited, s, dummy, dummy, matrix, capital, dummy, false, dummy);
-            }
-        }
-
-        Graph* Gt = transpose();
-        fill(visited.begin(), visited.end(), false);
-        int color_control = 0;
-
-        while (!s.empty()) {
-            int curr = s.top();
-            s.pop();
-
-            if (!visited[curr]) {
-                int batalion = curr, min_dist = matrix[capital][curr];
-                int num_components = 0;
-                Gt->Dfs(curr, visited, s, batalion, min_dist, matrix, capital, color_control, true, num_components);
-
-                if (num_components > 1) patrols++;
-                batalions.emplace_back(batalion, num_components);
-                color_control++;
-            }
-        }
-        return color_control;
+    void DFSUtil(int v, vector<bool>& visited, int color){
+        visited[v] = true;
+        colors[v] = color;
+        SCC_Components[color].push_back(v);
+        for(int neighbor : adjList[v])
+            if(!visited[neighbor])
+                DFSUtil(neighbor, visited, color);
     }
 
-    void bfs_parentage(int s, vector<pair<int, int>>& P) {
-        vector<bool> visited(vertices, false);
-        queue<int> q;
+    int Kosaraju() {
+    stack<int> Stack;
 
-        q.push(s);
-        visited[s] = true;
-        P[s] = {-1, -1};
+    vector<bool> visited(vertices, false);
 
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
+    // Passo 1: Ordem topológica no grafo original
+    for (int i = 0; i < vertices; i++)
+        if (!visited[i])
+            fillOrder(i, visited, Stack);
 
-            for (auto& edge : adjList[u]) {
-                int v = edge.first, edge_id = edge.second;
-                if (colors[v] == colors[s] && !visited[v]) {
-                    visited[v] = true;
-                    P[v] = {u, edge_id};
-                    q.push(v);
+    // Passo 2: Grafo transposto
+    Graph* gr = transpose();
+
+    fill(visited.begin(), visited.end(), false);
+
+    int color = 0;
+
+    // Passo 3: DFS no grafo transposto para identificar SCCs
+    while (!Stack.empty()) {
+        int v = Stack.top();
+        Stack.pop();
+
+        if (!visited[v]) {
+            gr->DFSUtil(v, visited, color);
+
+            // Determinar o nó mais próximo da capital dentro do SCC
+            int closestToCapital = -1;
+            int minDistance = INT_MAX;
+            vector<int> distances(vertices, INT_MAX);
+
+            // Calcular distâncias da capital até cada nó do SCC
+            Bfs(capital, distances, adjList);
+            for (int node : gr->SCC_Components[color]) {
+                if (distances[node] < minDistance) {
+                    closestToCapital = node;
+                    minDistance = distances[node];
                 }
+            }
+
+            batalions.push_back({closestToCapital, (int)gr->SCC_Components[color].size()});
+            if (gr->SCC_Components[color].size() > 1)
+                patrols++;
+            color++;
+        }
+    }
+
+    colors = gr->colors;
+    SCC_Components = gr->SCC_Components;
+
+    delete gr;
+    return color;
+}
+
+
+    void buildCondensationGraph(unordered_map<int, vector<int>>& condensationGraph, unordered_map<int, vector<int>>& condensationGraphReversed) {
+        unordered_map<int, unordered_set<int>> cond_adj;
+        unordered_map<int, unordered_set<int>> cond_adj_rev;
+        for(int u = 0; u < vertices; u++) {
+            int cu = colors[u];
+            for(int v : adjList[u]) {
+                int cv = colors[v];
+                if(cu != cv) {
+                    cond_adj[cu].insert(cv);
+                    cond_adj_rev[cv].insert(cu); // Construir grafo condensado reverso
+                }
+            }
+        }
+        for(auto& p : cond_adj) {
+            int u = p.first;
+            for(int v : p.second) {
+                condensationGraph[u].push_back(v);
+            }
+        }
+        for(auto& p : cond_adj_rev) {
+            int u = p.first;
+            for(int v : p.second) {
+                condensationGraphReversed[u].push_back(v);
             }
         }
     }
 
     void path_patrol(int s, unordered_map<int, string>& reverse_map) {
-        unordered_set<int> visitedNodes;
-        unordered_set<int> visitedEdges;
-        vector<int> patrolPath;
-        stack<int> stack;
+        int color = colors[s];
 
-        stack.push(s);
+        unordered_map<int, vector<int>> scc_adjList;
 
-        while (!stack.empty()) {
-            int curr = stack.top();
-            stack.pop();
-    
-            visitedNodes.insert(curr);
-            patrolPath.push_back(curr);
-
-            for (auto& edge : adjList[curr]) {
-                int neighbor = edge.first;
-                int edgeId = edge.second;
-
-                if (!visitedEdges.count(edgeId) && colors[neighbor] == colors[s]) {
-                    visitedEdges.insert(edgeId);
-                    stack.push(neighbor);
+        for(int u : SCC_Components[color]){
+            // Ordenar as arestas para tentar seguir a ordem esperada
+            sort(adjList[u].begin(), adjList[u].end(), [&](int a, int b) {
+                return reverse_map[a] < reverse_map[b];
+            });
+            for(int v : adjList[u]){
+                if(colors[v] == color){
+                    scc_adjList[u].push_back(v);
                 }
             }
         }
 
-        for (int node : patrolPath) {
-            cout << reverse_map[node] << " ";
+        // Algoritmo de Hierholzer
+        stack<int> curr_path;
+        vector<int> circuit;
+        unordered_map<int, vector<int>::iterator> edge_iter;
+
+        for(auto& p : scc_adjList){
+            edge_iter[p.first] = p.second.begin();
+        }
+
+        curr_path.push(s);
+        while(!curr_path.empty()){
+            int u = curr_path.top();
+            if(edge_iter[u] != scc_adjList[u].end()){
+                int v = *edge_iter[u];
+                edge_iter[u]++;
+                curr_path.push(v);
+            } else {
+                circuit.push_back(u);
+                curr_path.pop();
+            }
+        }
+
+        reverse(circuit.begin(), circuit.end());
+
+        // Remover o último vértice se for igual ao primeiro
+        if(circuit.size() > 1 && circuit.front() == circuit.back())
+            circuit.pop_back();
+
+        // Imprime o circuito
+        for(size_t i = 0; i < circuit.size(); ++i){
+            cout << reverse_map[circuit[i]];
+            if(i != circuit.size() - 1)
+                cout << " ";
         }
         cout << endl;
     }
 
-    void determine_patrols(unordered_map<int, string>& reverse_map) {
+    void determine_patrols(unordered_map<int,string>& reverse_map){
         cout << patrols << endl;
-        for (size_t i = 0; i < batalions.size(); i++) {
-            if (batalions[i].second > 1) {
-                path_patrol(batalions[i].first, reverse_map);
+        for(size_t i = 0; i < batalions.size(); i++)
+            if(batalions[i].second > 1){
+                int s = batalions[i].first;
+                // Se for a capital, usar a capital como início
+                if(s != capital)
+                    path_patrol(s, reverse_map);
+                else
+                    path_patrol(capital, reverse_map);
             }
-        }
     }
 };
 
-int main() {
-    int v, e;
-    cin >> v >> e;
-    unordered_map<string, int> map;
-    unordered_map<int, string> reverse;
+int main(){
+
+    int v, e; cin >> v >> e;
+    unordered_map<int,string> reverse;
     Graph g(v);
 
     int counter = 0;
-    while (e--) {
+    for(int i = 0; i < e; i++){
+
         string src, dest;
         cin >> src >> dest;
-        if (map.find(src) == map.end()) {
-            map[src] = counter;
+        if(g.map.find(src) == g.map.end()){
+            g.map[src] = counter;
             reverse[counter] = src;
+            g.node_index[counter] = i;
             counter++;
         }
-        if (map.find(dest) == map.end()) {
-            map[dest] = counter;
+        if(g.map.find(dest) == g.map.end()){
+            g.map[dest] = counter;
             reverse[counter] = dest;
+            g.node_index[counter] = i;
             counter++;
         }
-        g.addEdge(map[src], map[dest]);
+        g.addEdge(g.map[src], g.map[dest]);
     }
 
-    vector<vector<int>> matrix(v, vector<int>(v, INF));
-    int capital = g.FindCapital(matrix);
+    // 1. Encontra a capital
+    g.capital = g.FindCapital();
+    int capital = g.capital;
     cout << reverse[capital] << endl;
 
-    int n_batalions = g.Kosaraju(matrix, capital);
-    cout << n_batalions - 1 << endl;
+    // 2.1 Encontra SCCs e batalhões
+    int n_batalions = g.Kosaraju();
+    cout << n_batalions - 1 << endl; // Número de batalhões além da capital
 
-    for (auto& batalion : g.batalions) {
-        if (matrix[batalion.first][capital] == INF && batalion.first != capital) {
-            cout << reverse[batalion.first] << endl;
+    // 2.2 Imprime batalhões que não podem alcançar a capital
+    unordered_map<int, vector<int>> condensationGraph, condensationGraphReversed;
+    g.buildCondensationGraph(condensationGraph, condensationGraphReversed);
+
+    int capitalColor = g.colors[capital];
+    unordered_set<int> sccsThatReachCapital;
+    stack<int> s;
+    unordered_set<int> visitedSCCs;
+    s.push(capitalColor);
+    while(!s.empty()) {
+        int curr = s.top(); s.pop();
+        if(visitedSCCs.count(curr)) continue;
+        visitedSCCs.insert(curr);
+        sccsThatReachCapital.insert(curr);
+        for(int neighbor : condensationGraphReversed[curr]) {
+            if(!visitedSCCs.count(neighbor)) {
+                s.push(neighbor);
+            }
         }
     }
 
+    // Coletar os batalhões que não podem alcançar a capital
+    vector<string> unreachable_battalions;
+    for(int i = 0 ; i < n_batalions; i++){
+        int batalion = g.batalions[i].first;
+        int batalionColor = g.colors[batalion];
+        if(sccsThatReachCapital.count(batalionColor) == 0 && batalion != capital)
+            unreachable_battalions.push_back(reverse[batalion]);
+    }
+
+    // Ordenar os batalhões em ordem lexicográfica
+    sort(unreachable_battalions.begin(), unreachable_battalions.end());
+
+    // Imprimir os batalhões ordenados
+    for(const auto& name : unreachable_battalions){
+        cout << name << endl;
+    }
+
+    // 3.1 Determina as patrulhas
     g.determine_patrols(reverse);
+
     return 0;
 }
